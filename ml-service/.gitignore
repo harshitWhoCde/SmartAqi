@@ -1,3 +1,5 @@
 venv/
 .env
 __pycache__/
+ml-service/data/city_hour.csv
+data/city_hour.csv
