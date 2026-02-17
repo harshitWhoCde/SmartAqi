@@ -15,3 +15,7 @@ export const simulateCombined = (data) =>
 
 export const sensitivityTree = (data) =>
   API.post("/sensitivity-tree", data);
+
+export const getLiveAQI = () =>
+  API.get("/live-aqi");
+

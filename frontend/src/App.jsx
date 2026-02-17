@@ -3,14 +3,16 @@ import { Header } from "./components/Header";
 import { ControlPanel } from "./components/ControlPanel";
 import { SensitivityChart } from "./components/SensitivityChart";
 import { ExplainabilityPanel } from "./components/ExplainabilityPanel";
+
 import {
   forecastWithExplanation,
   simulateCombined,
   sensitivityTree,
+  getLiveAQI, // ⭐ NEW
 } from "./api";
 
 /* -------------------------------
-   Default Input (later from OpenAQ)
+   Default Input
 -------------------------------- */
 const defaultInput = {
   PM2_5: 446.61,
@@ -25,6 +27,9 @@ const defaultInput = {
 };
 
 export default function App() {
+
+  const [currentLiveAQI, setCurrentLiveAQI] = useState(null);
+
   const [selectedCity, setSelectedCity] = useState("Delhi");
 
   const [currentAQI, setCurrentAQI] = useState(0);
@@ -38,7 +43,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   /* -------------------------------
-     AQI Category
+     AQI Category Helper
   -------------------------------- */
   const getAQICategory = (aqi) => {
     if (aqi <= 50) return "Good";
@@ -56,7 +61,11 @@ export default function App() {
       try {
         setLoading(true);
 
-        // 1️⃣ Forecast + SHAP
+        // ⭐ 1️⃣ LIVE AQI
+        const liveRes = await getLiveAQI();
+        setCurrentLiveAQI(liveRes.data.current_aqi);
+
+        // ⭐ 2️⃣ Forecast + SHAP
         const res = await forecastWithExplanation(defaultInput);
 
         const prediction = res.data.prediction;
@@ -64,7 +73,6 @@ export default function App() {
         setCurrentAQI(prediction);
         setAqiCategory(getAQICategory(prediction));
 
-        // SHAP → chart format
         const shapFeatures = Object.entries(
           res.data.feature_contributions || {}
         ).map(([name, value]) => ({
@@ -74,7 +82,7 @@ export default function App() {
 
         setFeatures(shapFeatures);
 
-        // 2️⃣ Sensitivity
+        // ⭐ 3️⃣ Sensitivity analysis
         const sensRes = await sensitivityTree({
           ...defaultInput,
           min_multiplier: 0.5,
@@ -82,11 +90,11 @@ export default function App() {
           steps: 10,
         });
 
-        // 🔥 IMPORTANT FIX
-        const formattedSensitivity = sensRes.data.analysis.map((item) => ({
-          pmMultiplier: item.multiplier,
-          aqi: item.predicted_aqi,
-        }));
+        const formattedSensitivity =
+          sensRes.data.analysis?.map((item) => ({
+            pmMultiplier: item.multiplier,
+            aqi: item.predicted_aqi,
+          })) || [];
 
         setSensitivityData(formattedSensitivity);
 
@@ -120,6 +128,7 @@ export default function App() {
       setAqiCategory(getAQICategory(simulatedAQI));
 
       setTrend(simRes.data.impact_difference > 0 ? "up" : "down");
+
     } catch (err) {
       console.error("Simulation error:", err);
     } finally {
@@ -128,7 +137,7 @@ export default function App() {
   };
 
   /* -------------------------------
-     LOADING UI
+     LOADING SCREEN
   -------------------------------- */
   if (loading && currentAQI === 0) {
     return (
@@ -146,6 +155,7 @@ export default function App() {
           selectedCity={selectedCity}
           onCityChange={setSelectedCity}
           currentAQI={Math.round(currentAQI)}
+          currentLiveAQI={currentLiveAQI}   // ⭐ NEW
           aqiCategory={aqiCategory}
           trend={trend}
           aqiChange={aqiChange}

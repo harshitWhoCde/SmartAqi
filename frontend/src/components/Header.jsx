@@ -4,12 +4,17 @@ export function Header({
   selectedCity,
   onCityChange,
   currentAQI,
+  currentLiveAQI,   // ⭐ NEW
   aqiCategory,
   trend,
   aqiChange,
 }) {
+
   const cities = ["Delhi", "Mumbai", "Bangalore"];
 
+  /* -------------------------------
+     AQI Styling
+  -------------------------------- */
   const getSeverityStyle = (aqi = 0) => {
     if (aqi <= 100) {
       return {
@@ -39,6 +44,11 @@ export function Header({
   };
 
   const severityStyle = getSeverityStyle(currentAQI);
+
+  const liveDifference =
+    currentLiveAQI !== null
+      ? currentAQI - currentLiveAQI
+      : null;
 
   return (
     <div className="space-y-6">
@@ -75,14 +85,15 @@ export function Header({
           </select>
         </div>
 
-        {/* AQI Card */}
+        {/* AQI CARD */}
         <div
-          className={`${severityStyle.background} ${severityStyle.border} ${severityStyle.borderLeft} rounded-2xl p-8 shadow-xl min-w-[320px]`}
+          className={`${severityStyle.background} ${severityStyle.border} ${severityStyle.borderLeft} rounded-2xl p-8 shadow-xl min-w-[360px]`}
         >
           <p className="text-sm font-semibold text-gray-600 mb-3 uppercase">
             Predicted AQI (24h)
           </p>
 
+          {/* MAIN NUMBER */}
           <div className="flex items-start justify-between mb-4">
             <div>
               <div className="flex items-baseline gap-4">
@@ -90,9 +101,7 @@ export function Header({
                   {currentAQI ? Math.round(currentAQI) : "--"}
                 </span>
 
-                <span
-                  className={`text-xl font-semibold ${severityStyle.textAccent}`}
-                >
+                <span className={`text-xl font-semibold ${severityStyle.textAccent}`}>
                   {aqiCategory}
                 </span>
               </div>
@@ -105,11 +114,37 @@ export function Header({
             )}
           </div>
 
-          {/* Impact */}
+          {/* ⭐ LIVE AQI SECTION */}
+          {currentLiveAQI !== null && (
+            <div className="pt-3 border-t border-gray-200 mb-3">
+              <p className="text-sm text-gray-600">
+                Current AQI:{" "}
+                <span className="font-semibold text-gray-900">
+                  {Math.round(currentLiveAQI)}
+                </span>
+              </p>
+
+              {liveDifference !== null && (
+                <p
+                  className={`text-sm font-semibold mt-1 ${
+                    liveDifference > 0
+                      ? "text-red-600"
+                      : liveDifference < 0
+                      ? "text-green-600"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {liveDifference > 0 ? "+" : ""}
+                  {Math.round(liveDifference)} vs current
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Simulation Impact */}
           {aqiChange !== null && aqiChange !== undefined && (
             <div className="pt-3 border-t border-gray-200">
               <div className="flex items-center gap-2">
-
                 {aqiChange > 0 ? (
                   <>
                     <TrendingUp className="w-5 h-5 text-red-500" />
@@ -129,7 +164,6 @@ export function Header({
                     No change from base
                   </span>
                 )}
-
               </div>
 
               <p className="text-sm text-gray-600 mt-1 ml-7">
