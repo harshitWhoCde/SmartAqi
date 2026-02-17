@@ -2,7 +2,7 @@ import requests
 
 import os
 
-API_KEY = "db3d265d505d12b4fe2dc45d8ea5a342f6a4fe1752415cec154d9cf0b37cea00"
+API_KEY = os.getenv("OPENAQ_API_KEY")
 
 
 
