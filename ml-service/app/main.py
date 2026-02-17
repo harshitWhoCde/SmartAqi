@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from run_live_forecast import get_live_measurements
 
 from app.predict import (
     predict_next_hour,
@@ -42,6 +43,7 @@ class AQIInput(BaseModel):
     rolling_mean_24: float
 
 
+
 @app.post("/forecast")
 def forecast(data: AQIInput):
 
@@ -61,6 +63,22 @@ def forecast(data: AQIInput):
 
     return {
         "predicted_next_hour_aqi": prediction
+    }
+
+
+@app.get("/live-aqi")
+def live_aqi():
+    features = get_live_measurements()
+
+    # Simple AQI estimation from PM2.5
+    pm25 = features.get("PM2.5", 0)
+
+    # Quick approximation (replace later with proper AQI formula)
+    current_aqi = int(pm25 * 2)
+
+    return {
+        "current_aqi": current_aqi,
+        "live_features": features
     }
 
 

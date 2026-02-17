@@ -9,7 +9,9 @@ import {
   sensitivityTree,
 } from "./api";
 
-// Default input (you can later make this dynamic)
+/* -------------------------------
+   Default Input (later from OpenAQ)
+-------------------------------- */
 const defaultInput = {
   PM2_5: 446.61,
   PM10: 607.71,
@@ -33,20 +35,28 @@ export default function App() {
   const [features, setFeatures] = useState([]);
   const [sensitivityData, setSensitivityData] = useState([]);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // AQI category helper
+  /* -------------------------------
+     AQI Category
+  -------------------------------- */
   const getAQICategory = (aqi) => {
+    if (aqi <= 50) return "Good";
     if (aqi <= 100) return "Moderate";
     if (aqi <= 200) return "Poor";
     if (aqi <= 300) return "Very Poor";
     return "Severe";
   };
 
-  // Load initial forecast + SHAP
+  /* -------------------------------
+     INITIAL LOAD
+  -------------------------------- */
   useEffect(() => {
     const loadInitialData = async () => {
       try {
+        setLoading(true);
+
+        // 1️⃣ Forecast + SHAP
         const res = await forecastWithExplanation(defaultInput);
 
         const prediction = res.data.prediction;
@@ -54,9 +64,9 @@ export default function App() {
         setCurrentAQI(prediction);
         setAqiCategory(getAQICategory(prediction));
 
-        // Convert SHAP object → array
+        // SHAP → chart format
         const shapFeatures = Object.entries(
-          res.data.feature_contributions
+          res.data.feature_contributions || {}
         ).map(([name, value]) => ({
           name,
           value,
@@ -64,7 +74,7 @@ export default function App() {
 
         setFeatures(shapFeatures);
 
-        // Load sensitivity curve
+        // 2️⃣ Sensitivity
         const sensRes = await sensitivityTree({
           ...defaultInput,
           min_multiplier: 0.5,
@@ -72,19 +82,27 @@ export default function App() {
           steps: 10,
         });
 
-        setSensitivityData(sensRes.data.analysis);
+        // 🔥 IMPORTANT FIX
+        const formattedSensitivity = sensRes.data.analysis.map((item) => ({
+          pmMultiplier: item.multiplier,
+          aqi: item.predicted_aqi,
+        }));
+
+        setSensitivityData(formattedSensitivity);
+
       } catch (err) {
-        console.error("Error loading data:", err);
+        console.error("Initial load error:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
     loadInitialData();
   }, []);
 
-  console.log("Sensitivity Data:", sensitivityData);
-
-
-  // Simulation from control panel
+  /* -------------------------------
+     SIMULATION
+  -------------------------------- */
   const handleSimulate = async (trafficMultiplier, treeMultiplier) => {
     try {
       setLoading(true);
@@ -95,9 +113,11 @@ export default function App() {
         reduction_multiplier: treeMultiplier,
       });
 
-      setCurrentAQI(simRes.data.simulated_prediction);
+      const simulatedAQI = simRes.data.simulated_prediction;
+
+      setCurrentAQI(simulatedAQI);
       setAqiChange(simRes.data.impact_difference);
-      setAqiCategory(getAQICategory(simRes.data.simulated_prediction));
+      setAqiCategory(getAQICategory(simulatedAQI));
 
       setTrend(simRes.data.impact_difference > 0 ? "up" : "down");
     } catch (err) {
@@ -106,6 +126,17 @@ export default function App() {
       setLoading(false);
     }
   };
+
+  /* -------------------------------
+     LOADING UI
+  -------------------------------- */
+  if (loading && currentAQI === 0) {
+    return (
+      <div className="h-screen flex items-center justify-center text-xl font-semibold">
+        Loading AQI dashboard...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

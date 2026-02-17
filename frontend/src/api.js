@@ -1,12 +1,17 @@
 import axios from "axios";
 
-const API_URL = "http://127.0.0.1:8000";
+// Create ONE axios instance
+const API = axios.create({
+  baseURL: "https://aqi-forecast-api-1dn0.onrender.com",
+});
+
+// ---- API CALLS ----
 
 export const forecastWithExplanation = (data) =>
-  axios.post(`${API_URL}/forecast-with-explanation`, data);
+  API.post("/forecast-with-explanation", data);
 
 export const simulateCombined = (data) =>
-  axios.post(`${API_URL}/simulate-combined`, data);
+  API.post("/simulate-combined", data);
 
 export const sensitivityTree = (data) =>
-  axios.post(`${API_URL}/sensitivity-tree`, data);
+  API.post("/sensitivity-tree", data);
